@@ -7,13 +7,15 @@ class BRScraper:
     def __init__(self, server_url="http://www.baseball-reference.com/"):
         self.server_url = server_url
 
-    def parse_tables(self, resource, table_ids=None, verbose=False):
+    def parse_tables(self, resource, table_ids=None, return_headers=False, verbose=False):
         """
         Given a resource on the baseball-reference server (should consist of
         the url after the hostname and slash), returns a dictionary keyed on
         table id containing arrays of data dictionaries keyed on the header
         columns. table_ids is a string or array of strings that can optionally
-        be used to filter out which stats tables to return.
+        be used to filter out which stats tables to return. If return_header is
+        True, also returns a dictionary containing the order of the column
+        names.
         """
 
         def is_parseable_table(tag):
@@ -30,6 +32,7 @@ class BRScraper:
         soup = BeautifulSoup(urllib2.urlopen(self.server_url + resource))
         tables = soup.find_all(is_parseable_table)
         data = {}
+        column_orders = {}
 
         # Read through each table, read headers as dictionary keys
         for table in tables:
@@ -58,6 +61,7 @@ class BRScraper:
                 else:
                     header_name = base_header_name
                 header_names.append(header_name)
+            column_orders[table["id"]] = header_names
 
             rows = table.find("tbody").find_all(is_parseable_row)
             for row in rows:
@@ -70,5 +74,8 @@ class BRScraper:
                         entry_data.append(entry.string.strip())
                 if len(entry_data) > 0:
                     data[table["id"]].append(dict(zip(header_names, entry_data)))
+
+        if return_headers:
+            return data, column_orders
 
         return data
